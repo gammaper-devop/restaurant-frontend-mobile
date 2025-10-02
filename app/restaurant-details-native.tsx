@@ -1,28 +1,132 @@
+import { Ionicons } from '@expo/vector-icons';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
+
+// TypeScript declaration for __DEV__
+declare const __DEV__: boolean;
 import {
-  View,
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  Image,
+  Linking,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
   Text,
   TouchableOpacity,
-  ScrollView,
-  Image,
-  SafeAreaView,
-  Dimensions,
-  Linking,
-  Alert,
-  StyleSheet,
-  ActivityIndicator
+  View
 } from 'react-native';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { apiService } from '../services/apiService';
-import { Restaurant } from '../types';
+import { Restaurant, RestaurantLocation, DaySchedule, OperatingHours } from '../types';
 
 const { width } = Dimensions.get('window');
+
+/**
+ * Format time from 24-hour format to 12-hour format
+ * @param time Time in format "HH:MM"
+ * @returns Formatted time string
+ */
+const formatTime = (time: string): string => {
+  if (!time) return '';
+  
+  const [hours, minutes] = time.split(':');
+  const hour24 = parseInt(hours, 10);
+  const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
+  const ampm = hour24 >= 12 ? 'PM' : 'AM';
+  
+  return `${hour12}:${minutes} ${ampm}`;
+};
+
+/**
+ * Get current day name
+ * @returns Current day name in lowercase
+ */
+const getCurrentDay = (): keyof OperatingHours => {
+  const days: (keyof OperatingHours)[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  const today = new Date().getDay();
+  return days[today];
+};
+
+/**
+ * Check if two day schedules are the same
+ * @param day1 First day schedule
+ * @param day2 Second day schedule
+ * @returns True if schedules are identical
+ */
+const areSameSchedule = (day1: DaySchedule, day2: DaySchedule): boolean => {
+  return day1.open === day2.open && day1.close === day2.close && day1.closed === day2.closed;
+};
+
+/**
+ * Group consecutive days with same schedule
+ * @param operatingHours Operating hours for all days
+ * @returns Array of grouped schedule ranges
+ */
+const groupOperatingHours = (operatingHours: OperatingHours) => {
+  const daysOrder: (keyof OperatingHours)[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+  const dayLabels: Record<keyof OperatingHours, string> = {
+    monday: 'Mon',
+    tuesday: 'Tue', 
+    wednesday: 'Wed',
+    thursday: 'Thu',
+    friday: 'Fri',
+    saturday: 'Sat',
+    sunday: 'Sun'
+  };
+  
+  const groups: { days: string; schedule: DaySchedule; isToday: boolean }[] = [];
+  let currentGroup: (keyof OperatingHours)[] = [];
+  let currentSchedule: DaySchedule | null = null;
+  const today = getCurrentDay();
+  
+  for (const day of daysOrder) {
+    const schedule = operatingHours[day];
+    
+    if (!currentSchedule || !areSameSchedule(currentSchedule, schedule)) {
+      // Start new group
+      if (currentGroup.length > 0) {
+        const dayRange = currentGroup.length === 1 
+          ? dayLabels[currentGroup[0]]
+          : `${dayLabels[currentGroup[0]]} - ${dayLabels[currentGroup[currentGroup.length - 1]]}`;
+        
+        groups.push({
+          days: dayRange,
+          schedule: currentSchedule!,
+          isToday: currentGroup.includes(today)
+        });
+      }
+      
+      currentGroup = [day];
+      currentSchedule = schedule;
+    } else {
+      // Add to current group
+      currentGroup.push(day);
+    }
+  }
+  
+  // Add the last group
+  if (currentGroup.length > 0 && currentSchedule) {
+    const dayRange = currentGroup.length === 1 
+      ? dayLabels[currentGroup[0]]
+      : `${dayLabels[currentGroup[0]]} - ${dayLabels[currentGroup[currentGroup.length - 1]]}`;
+    
+    groups.push({
+      days: dayRange,
+      schedule: currentSchedule,
+      isToday: currentGroup.includes(today)
+    });
+  }
+  
+  return groups;
+};
 
 export default function RestaurantDetailsNativeScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
+  const [restaurantLocations, setRestaurantLocations] = useState<RestaurantLocation | null>(null);
+  const [isCurrentlyOpen, setIsCurrentlyOpen] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFavorite, setIsFavorite] = useState(false);
 
@@ -35,8 +139,29 @@ export default function RestaurantDetailsNativeScreen() {
     
     try {
       setLoading(true);
-      const data = await apiService.getRestaurantById(parseInt(id));
-      setRestaurant(data);
+      const restaurantData = await apiService.getRestaurantById(parseInt(id));
+      setRestaurant(restaurantData);
+      
+      const restaurantLocationsData = await apiService.getRestaurantLocationsByRestaurantId(parseInt(id));
+      const firstLocation = restaurantLocationsData[0];
+      setRestaurantLocations(firstLocation);
+      
+      // Check if the location is currently open
+      if (firstLocation) {
+        try {
+          const openStatus = await apiService.isLocationCurrentlyOpen(firstLocation.id);
+          setIsCurrentlyOpen(openStatus);
+        } catch (error) {
+          if (__DEV__) {
+            console.warn('Failed to check open status:', error);
+          }
+          // Fall back to static value if available
+          setIsCurrentlyOpen(restaurantData?.isOpen || false);
+        }
+      } else {
+        // Fall back to static value from restaurant data
+        setIsCurrentlyOpen(restaurantData?.isOpen || false);
+      }
     } catch (error) {
       Alert.alert('Error', 'Failed to load restaurant details');
     } finally {
@@ -45,14 +170,14 @@ export default function RestaurantDetailsNativeScreen() {
   };
 
   const handleCall = () => {
-    if (restaurant?.phone) {
-      Linking.openURL(`tel:${restaurant.phone}`);
+    if (restaurantLocations?.phone) {
+      Linking.openURL(`tel:${restaurantLocations?.phone}`);
     }
   };
 
   const handleDirections = () => {
-    if (restaurant?.latitude && restaurant?.longitude) {
-      const url = `https://maps.google.com/?q=${restaurant.latitude},${restaurant.longitude}`;
+    if (restaurantLocations?.latitude && restaurantLocations?.longitude) {
+      const url = `https://maps.google.com/?q=${restaurantLocations.latitude},${restaurantLocations.longitude}`;
       Linking.openURL(url);
     }
   };
@@ -138,10 +263,13 @@ export default function RestaurantDetailsNativeScreen() {
 
             {/* Status Badge */}
             <View style={styles.statusBadgeContainer}>
-              <View style={[styles.statusBadge, restaurant.isOpen ? styles.openBadge : styles.closedBadge]}>
+              <View style={[
+                styles.statusBadge, 
+                isCurrentlyOpen === null ? styles.checkingBadge : (isCurrentlyOpen ? styles.openBadge : styles.closedBadge)
+              ]}>
                 <View style={styles.statusDot} />
                 <Text style={styles.statusText}>
-                  {restaurant.isOpen ? 'Open Now' : 'Closed'}
+                  {isCurrentlyOpen === null ? 'Checking...' : (isCurrentlyOpen ? 'Open Now' : 'Closed')}
                 </Text>
               </View>
             </View>
@@ -203,17 +331,17 @@ export default function RestaurantDetailsNativeScreen() {
                 {restaurant.address && (
                   <View style={styles.contactItem}>
                     <Ionicons name="location" size={20} color="#6B7280" />
-                    <Text style={styles.contactText}>{restaurant.address}</Text>
+                    <Text style={styles.contactText}>{restaurantLocations?.address}</Text>
                     <TouchableOpacity onPress={handleDirections}>
                       <Text style={styles.contactAction}>Directions</Text>
                     </TouchableOpacity>
                   </View>
                 )}
                 
-                {restaurant.phone && (
+                {restaurantLocations?.phone && (
                   <View style={styles.contactItem}>
                     <Ionicons name="call" size={20} color="#6B7280" />
-                    <Text style={styles.contactText}>{restaurant.phone}</Text>
+                    <Text style={styles.contactText}>{restaurantLocations?.phone}</Text>
                     <TouchableOpacity onPress={handleCall}>
                       <Text style={styles.contactAction}>Call</Text>
                     </TouchableOpacity>
@@ -226,54 +354,48 @@ export default function RestaurantDetailsNativeScreen() {
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Opening Hours</Text>
               <View style={styles.hoursContainer}>
-                <View style={styles.hoursRow}>
-                  <Text style={styles.hoursDay}>Monday - Friday</Text>
-                  <Text style={styles.hoursTime}>9:00 AM - 10:00 PM</Text>
-                </View>
-                <View style={[styles.hoursRow, styles.hoursRowBorder]}>
-                  <Text style={styles.hoursDay}>Saturday - Sunday</Text>
-                  <Text style={styles.hoursTime}>10:00 AM - 11:00 PM</Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Cuisine Type */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Cuisine</Text>
-              <View style={styles.cuisineContainer}>
-                {restaurant.cuisine?.split(' • ').map((cuisine, index) => (
-                  <View key={index} style={styles.cuisineTag}>
-                    <Text style={styles.cuisineText}>{cuisine}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-
-            {/* Reviews Summary */}
-            <View style={[styles.section, styles.lastSection]}>
-              <Text style={styles.sectionTitle}>Customer Reviews</Text>
-              <View style={styles.reviewsContainer}>
-                <View style={styles.reviewsHeader}>
-                  <View style={styles.reviewsLeft}>
-                    <Text style={styles.reviewsScore}>{restaurant.rating}</Text>
-                    <View style={styles.reviewsDetails}>
-                      <View style={styles.starsContainer}>
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <Ionicons
-                            key={star}
-                            name="star"
-                            size={16}
-                            color={star <= Math.floor(restaurant.rating || 0) ? "#F59E0B" : "#E5E7EB"}
-                          />
-                        ))}
+                {restaurantLocations?.operatingHours ? (
+                  groupOperatingHours(restaurantLocations.operatingHours).map((group, index, array) => (
+                    <View 
+                      key={`${group.days}-${index}`} 
+                      style={[
+                        styles.hoursRow, 
+                        index > 0 && styles.hoursRowBorder,
+                        group.isToday && styles.todayRow
+                      ]}
+                    >
+                      <View style={styles.hoursLeftSection}>
+                        <Text style={[
+                          styles.hoursDay,
+                          group.isToday && styles.todayText
+                        ]}>
+                          {group.days}
+                        </Text>
+                        {group.isToday && (
+                          <View style={styles.todayIndicator}>
+                            <Text style={styles.todayLabel}>Today</Text>
+                          </View>
+                        )}
                       </View>
-                      <Text style={styles.reviewsCount}>Based on 150+ reviews</Text>
+                      
+                      <Text style={[
+                        styles.hoursTime,
+                        group.isToday && styles.todayTimeText,
+                        group.schedule.closed && styles.closedText
+                      ]}>
+                        {group.schedule.closed 
+                          ? 'Closed' 
+                          : `${formatTime(group.schedule.open)} - ${formatTime(group.schedule.close)}`
+                        }
+                      </Text>
                     </View>
+                  ))
+                ) : (
+                  <View style={styles.hoursRow}>
+                    <Text style={styles.hoursDay}>Hours information</Text>
+                    <Text style={styles.hoursTime}>Not available</Text>
                   </View>
-                  <TouchableOpacity>
-                    <Text style={styles.reviewsAction}>See all reviews</Text>
-                  </TouchableOpacity>
-                </View>
+                )}
               </View>
             </View>
           </View>
@@ -294,13 +416,10 @@ export default function RestaurantDetailsNativeScreen() {
               onPress={handleDirections}
               style={styles.secondaryActionButton}
             >
-              <Ionicons name="directions" size={20} color="#374151" />
+              <Ionicons name="navigate-outline" size={20} color="#374151" />
               <Text style={styles.secondaryActionText}>Directions</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity style={styles.primaryActionButton}>
-              <Text style={styles.primaryActionText}>Order Now</Text>
-            </TouchableOpacity>
           </View>
         </View>
       </SafeAreaView>
@@ -407,6 +526,9 @@ const styles = StyleSheet.create({
   },
   closedBadge: {
     backgroundColor: '#ef4444',
+  },
+  checkingBadge: {
+    backgroundColor: '#6b7280',
   },
   statusDot: {
     width: 8,
@@ -531,6 +653,38 @@ const styles = StyleSheet.create({
   },
   hoursTime: {
     color: '#1F2937',
+    fontWeight: '500',
+  },
+  hoursLeftSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  todayRow: {
+    backgroundColor: 'rgba(5, 150, 105, 0.05)',
+  },
+  todayText: {
+    color: '#059669',
+    fontWeight: '600',
+  },
+  todayTimeText: {
+    color: '#059669',
+    fontWeight: '600',
+  },
+  todayIndicator: {
+    backgroundColor: '#059669',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+    marginLeft: 8,
+  },
+  todayLabel: {
+    color: 'white',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  closedText: {
+    color: '#EF4444',
     fontWeight: '500',
   },
   cuisineContainer: {

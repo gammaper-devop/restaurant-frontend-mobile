@@ -75,8 +75,8 @@ export interface RestaurantLocation extends BaseEntity {
   longitude: number;
   operatingHours: OperatingHours;
   restaurant: Restaurant;
-  district: District;
-  isCurrentlyOpen?: boolean;
+  districtId: number;
+  // isCurrentlyOpen?: boolean;
 }
 
 // Nearby Restaurant Result (for mobile app)

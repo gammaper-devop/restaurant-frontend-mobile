@@ -1,24 +1,22 @@
-import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  TouchableOpacity, 
-  ScrollView, 
-  TextInput, 
-  Image,
-  SafeAreaView,
-  RefreshControl,
-  Alert,
-  StyleSheet,
-  ActivityIndicator,
-  Dimensions,
-  Animated,
-  Platform
-} from 'react-native';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useRestaurantsByCategory, useLocation } from '../hooks';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import {
+  ActivityIndicator,
+  Animated,
+  Dimensions,
+  Image,
+  Platform,
+  RefreshControl,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from 'react-native';
+import { useLocation, useRestaurantsByCategory } from '../hooks';
 
 const { width, height } = Dimensions.get('window');
 
@@ -113,11 +111,6 @@ export default function CategoryRestaurantsScreen() {
               <Ionicons name="heart-outline" size={22} color="white" />
             </TouchableOpacity>
             
-            {/* Rating Badge */}
-            <View style={styles.ratingBadge}>
-              <Ionicons name="star" size={16} color="#FFD700" />
-              <Text style={styles.ratingText}>{restaurant.rating}</Text>
-            </View>
           </View>
 
           {/* Restaurant Info */}
@@ -134,9 +127,7 @@ export default function CategoryRestaurantsScreen() {
               </View>
             </View>
 
-            <Text style={styles.restaurantDescription} numberOfLines={2}>
-              {restaurant.description}
-            </Text>
+            <Text style={styles.separator}>•</Text>
 
             <View style={styles.restaurantFooter}>
               <View style={styles.locationInfo}>
@@ -150,19 +141,20 @@ export default function CategoryRestaurantsScreen() {
                 </Text>
               </View>
               
+              {/* Location is currently open */}
               <View style={[
                 styles.statusIndicator,
                 restaurant.isOpen ? styles.openIndicator : styles.closedIndicator
-              ]}>
-                <View style={styles.statusDot} />
-                <Text style={[
-                  styles.statusText,
-                  restaurant.isOpen ? styles.openText : styles.closedText
                 ]}>
-                  {restaurant.isOpen ? 'Open' : 'Closed'}
-                </Text>
+                <View style={styles.statusDot} />
+                  <Text style={[
+                    styles.statusText,
+                    restaurant.isOpen ? styles.openText : styles.closedText
+                  ]}>
+                    {restaurant.isOpen ? 'Open' : 'Closed'}
+                  </Text>
+                </View>
               </View>
-            </View>
           </View>
         </View>
       </TouchableOpacity>

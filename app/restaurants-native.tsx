@@ -15,7 +15,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-import { useCategories, useNearbyRestaurants } from '../hooks';
+import { useCategories, useNearbyRestaurants, useRestaurantOpenStatus } from '../hooks';
 
 const { width } = Dimensions.get('window');
 
@@ -43,6 +43,16 @@ export default function RestaurantsNativeScreen() {
     loading: categoriesLoading,
     error: categoriesError
   } = useCategories();
+
+  // Obtener estados dinámicos de apertura/cierre
+  const {
+    getRestaurantOpenStatus,
+    refreshOpenStatuses,
+    isLoading: openStatusLoading
+  } = useRestaurantOpenStatus({ 
+    restaurants,
+    refreshInterval: 10 * 60 * 1000 // Refresh every 10 minutes
+  });
 
   const filteredRestaurants = restaurants.filter(restaurant => {
     // Filtro por texto de búsqueda
@@ -75,74 +85,50 @@ export default function RestaurantsNativeScreen() {
     router.push(`/category-restaurants?categoryId=${category.id}&categoryName=${encodeURIComponent(category.name)}&categoryIcon=${encodeURIComponent(category.icon || '🍽️')}`);
   };
 
-  const renderRestaurantCard = (restaurant: any, index: number) => (
-    <TouchableOpacity 
-      key={restaurant.id || index}
-      style={styles.restaurantCard}
-      onPress={() => handleRestaurantPress(restaurant)}
-      activeOpacity={0.7}
-    >
-      {/* Restaurant Image */}
-      <View style={styles.imageContainer}>
-        <Image
-          source={{ uri: restaurant.imageUrl }}
-          style={styles.restaurantImage}
-          resizeMode="cover"
-        />
-        
-        {/* Favorite Button */}
-        <TouchableOpacity style={styles.favoriteButton}>
-          <Ionicons name="heart-outline" size={20} color="#6B7280" />
-        </TouchableOpacity>
-        
-        {/* Delivery Time Badge */}
-        <View style={styles.deliveryBadge}>
-          <Ionicons name="bicycle" size={14} color="#059669" />
-          <Text style={styles.deliveryTime}>
-            {restaurant.openingHours}
-          </Text>
-        </View>
-      </View>
+  const renderRestaurantCard = (restaurant: any, index: number) => {
+    const openStatus = getRestaurantOpenStatus(restaurant.id);
+    const { isOpen, loading } = openStatus;
 
-      {/* Restaurant Info */}
-      <View style={styles.restaurantInfo}>
-        <View style={styles.restaurantHeader}>
-          <Text style={styles.restaurantName} numberOfLines={1}>
-            {restaurant.name}
-          </Text>
-          <View style={styles.ratingContainer}>
-            <Ionicons name="star" size={14} color="#F59E0B" />
-            <Text style={styles.ratingText}>
-              {restaurant.rating}
-            </Text>
-          </View>
+    return (
+      <TouchableOpacity 
+        key={restaurant.id || index}
+        style={styles.restaurantCard}
+        onPress={() => handleRestaurantPress(restaurant)}
+        activeOpacity={0.7}
+      >
+        {/* Restaurant Image */}
+        <View style={styles.imageContainer}>
+          <Image
+            source={{ uri: restaurant.imageUrl }}
+            style={styles.restaurantImage}
+            resizeMode="cover"
+          />
         </View>
 
-        <Text style={styles.restaurantDescription} numberOfLines={1}>
-          {restaurant.description}
-        </Text>
-
-        <View style={styles.restaurantFooter}>
-          <View style={styles.infoRow}>
-            <Ionicons name="location-outline" size={16} color="#6B7280" />
-            <Text style={styles.distanceText}>
-              {restaurant.formattedDistance}
-            </Text>
-            <Text style={styles.separator}>•</Text>
-            <Text style={styles.priceText}>
-              {restaurant.priceRange} delivery
+        {/* Restaurant Info */}
+        <View style={styles.restaurantInfo}>
+          <View style={styles.restaurantHeader}>
+            <Text style={styles.restaurantName} numberOfLines={1}>
+              {restaurant.name}
             </Text>
           </View>
-          
-          {!restaurant.isOpen && (
-            <View style={styles.closedBadge}>
-              <Text style={styles.closedText}>Closed</Text>
+
+          <View style={styles.restaurantFooter}>
+            <View style={styles.infoRow}>
+              <Ionicons name="location-outline" size={16} color="#6B7280" />
+              <Text style={styles.distanceText}>
+                {restaurant.formattedDistance}
+              </Text>
+              <Text style={styles.separator}>•</Text>
+              <Text style={styles.priceText}>
+                {restaurant.priceRange} delivery
+              </Text>
             </View>
-          )}
+          </View>
         </View>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
@@ -610,5 +596,50 @@ const styles = StyleSheet.create({
     color: '#dc2626',
     fontSize: 12,
     fontWeight: '500',
+  },
+  // New dynamic status badge styles
+  openStatusBadge: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    minWidth: 60,
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'white',
+    marginRight: 4,
+  },
+  statusText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  openStatusBadgeColor: {
+    backgroundColor: '#22c55e',
+  },
+  closedStatusBadgeColor: {
+    backgroundColor: '#ef4444',
+  },
+  unknownStatusBadgeColor: {
+    backgroundColor: '#6b7280',
+  },
+  loadingStatusBadgeColor: {
+    backgroundColor: 'rgba(107, 114, 128, 0.9)',
+    paddingHorizontal: 6,
+  },
+  loadingStatusText: {
+    color: 'white',
+    fontSize: 11,
+    fontWeight: '500',
+    marginLeft: 4,
   },
 });

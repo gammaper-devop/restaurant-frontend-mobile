@@ -57,7 +57,7 @@ export const useLocation = () => {
       // Get current location
       const locationResult = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
-        maximumAge: 10000, // Use cached location if less than 10 seconds old
+        // Note: maxAge is not available in expo-location, removing for compatibility
       });
 
       const userLocation: UserLocation = {

@@ -1,17 +1,17 @@
+import { Ionicons } from '@expo/vector-icons';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-  View,
+  Alert,
+  Dimensions,
+  Image,
+  Linking,
+  SafeAreaView,
+  ScrollView,
   Text,
   TouchableOpacity,
-  ScrollView,
-  Image,
-  SafeAreaView,
-  Dimensions,
-  Linking,
-  Alert
+  View
 } from 'react-native';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { apiService } from '../services/apiService';
 import { Restaurant } from '../types';
 
@@ -34,6 +34,7 @@ export default function RestaurantDetailsScreen() {
     try {
       setLoading(true);
       const data = await apiService.getRestaurantById(parseInt(id));
+      console.log(`✅ Data: ${data} loaded`);
       setRestaurant(data);
     } catch (error) {
       Alert.alert('Error', 'Failed to load restaurant details');
@@ -296,12 +297,8 @@ export default function RestaurantDetailsScreen() {
               onPress={handleDirections}
               className="flex-1 bg-gray-100 py-4 rounded-xl items-center"
             >
-              <Ionicons name="directions" size={20} color="#374151" />
+              <Ionicons name="navigate-outline" size={20} color="#374151" />
               <Text className="text-gray-700 font-medium mt-1">Directions</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity className="flex-2 bg-emerald-600 py-4 rounded-xl items-center">
-              <Text className="text-white font-bold text-lg">Order Now</Text>
             </TouchableOpacity>
           </View>
         </View>

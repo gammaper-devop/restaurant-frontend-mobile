@@ -1,5 +1,8 @@
 import axios from 'axios';
-import { ApiResponse, Category, Restaurant } from '../types';
+import { ApiResponse, Category, Restaurant, RestaurantLocation } from '../types';
+
+// TypeScript declaration for __DEV__
+declare const __DEV__: boolean;
 
 // Configure your backend URL here
 // For development: Use localhost or your actual backend URL
@@ -18,11 +21,15 @@ const api = axios.create({
 // Add request interceptor for logging (optional)
 api.interceptors.request.use(
   (config) => {
-    console.log(`🔄 API Request: ${config.method?.toUpperCase()} ${config.url}`);
+    if (__DEV__) {
+      console.log(`🔄 API Request: ${config.method?.toUpperCase()} ${config.url}`);
+    }
     return config;
   },
   (error) => {
-    console.error('🔴 API Request Error:', error);
+    if (__DEV__) {
+      console.error('🔴 API Request Error:', error);
+    }
     return Promise.reject(error);
   }
 );
@@ -30,11 +37,20 @@ api.interceptors.request.use(
 // Add response interceptor for error handling
 api.interceptors.response.use(
   (response) => {
-    console.log(`✅ API Response: ${response.status} ${response.config.url}`);
+    if (__DEV__) {
+      console.log(`✅ API Response: ${response.status} ${response.config.url}`);
+    }
     return response;
   },
   (error) => {
-    console.error('🔴 API Response Error:', error.response?.data || error.message);
+    if (__DEV__) {
+      try {
+        const errorMessage = error.response?.data || error.message || 'Unknown error';
+        console.error('🔴 API Response Error:', errorMessage);
+      } catch (logError) {
+        // Silently fail if logging causes issues
+      }
+    }
     return Promise.reject(error);
   }
 );
@@ -75,7 +91,9 @@ export class ApiService {
       return response.data.data || [];
     } catch (error) {
       // For development/testing, return mock data if API is not available
-      console.warn('⚠️ API not available, returning mock data');
+      if (__DEV__) {
+        console.warn('⚠️ API not available, returning mock data');
+      }
       return this.getMockRestaurants(latitude, longitude);
     }
   }
@@ -89,22 +107,10 @@ export class ApiService {
       const response = await api.get<ApiResponse<Category[]>>('/categories');
       return response.data.data || [];
     } catch (error) {
-      console.warn('⚠️ API not available, returning mock categories');
+      if (__DEV__) {
+        console.warn('⚠️ API not available, returning mock categories');
+      }
       return this.getMockCategories();
-    }
-  }
-
-  /**
-   * Get all restaurant locations
-   * @returns Array of locations with restaurant data
-   */
-  async getLocations(): Promise<Restaurant[]> {
-    try {
-      const response = await api.get<ApiResponse<Restaurant[]>>('/locations');
-      return response.data.data || [];
-    } catch (error) {
-      console.warn('⚠️ API not available, returning mock locations');
-      return this.getMockRestaurants();
     }
   }
 
@@ -118,10 +124,54 @@ export class ApiService {
       const response = await api.get<ApiResponse<Restaurant>>(`/restaurants/${id}`);
       return response.data.data || null;
     } catch (error) {
-      console.warn('⚠️ API not available, returning mock restaurant data');
+      if (__DEV__) {
+        console.warn('⚠️ API not available, returning mock restaurant data');
+      }
       // Return mock restaurant from our mock data
       const mockRestaurants = this.getMockRestaurants();
       return mockRestaurants.find(restaurant => restaurant.id === id) || null;
+    }
+  }
+
+  /**
+   * Get restaurants locations by restaurant ID
+   * @param restaurantId Restaurant ID to filter by
+   * @returns Restaurant locations data
+   */
+  async getRestaurantLocationsByRestaurantId(restaurantId: number): Promise<RestaurantLocation[]> {
+    try {
+      const response = await api.get<ApiResponse<RestaurantLocation[]>>(`/restaurants/${restaurantId}/locations`);
+      return response.data.data || [];
+    } catch (error) {
+      if (__DEV__) {
+        console.warn('⚠️ API not available, returning mock restaurant locations');
+      }
+      // Return mock restaurant locations from our mock data
+      return this.getMockRestaurantLocations(restaurantId);
+    }
+  }
+
+  /**
+   * Check if a restaurant location is currently open
+   * @param locationId Restaurant Location ID
+   * @returns Boolean indicating if the location is currently open
+   */
+  async isLocationCurrentlyOpen(locationId: number): Promise<boolean> {
+    try {
+      const response = await api.get<ApiResponse<{
+        locationId: number;
+        isCurrentlyOpen: boolean;
+        currentTime: string;
+        nextOpeningTime?: string | null;
+      }>>(`/restaurants/locations/${locationId}/is-open`);
+      
+      return response.data.data?.isCurrentlyOpen || false;
+    } catch (error) {
+      if (__DEV__) {
+        console.warn('⚠️ API endpoint failed, falling back to mock open status');
+      }
+      // Fallback to mock data if API call fails
+      return this.getMockOpenStatus();
     }
   }
 
@@ -146,10 +196,14 @@ export class ApiService {
       });
 
       const restaurants = response.data.data || [];
-      console.log(`🍽️ Found ${restaurants.length} restaurants for category ID: ${categoryId}`);
+      if (__DEV__) {
+        console.log(`🍽️ Found ${restaurants.length} restaurants for category ID: ${categoryId}`);
+      }
       return restaurants;
     } catch (error) {
-      console.warn(`⚠️ API not available, filtering mock data by category ID: ${categoryId}`);
+      if (__DEV__) {
+        console.warn(`⚠️ API not available, filtering mock data by category ID: ${categoryId}`);
+      }
       // Filter mock restaurants by category ID
       const mockRestaurants = this.getMockRestaurants(latitude, longitude);
       const filteredResults = mockRestaurants.filter(restaurant => {
@@ -172,7 +226,9 @@ export class ApiService {
                description.includes(categoryName);
       });
       
-      console.log(`📍 Found ${filteredResults.length} mock restaurants for category ID: ${categoryId}`);
+      if (__DEV__) {
+        console.log(`📍 Found ${filteredResults.length} mock restaurants for category ID: ${categoryId}`);
+      }
       return filteredResults;
     }
   }
@@ -202,7 +258,9 @@ export class ApiService {
 
       return response.data.data || [];
     } catch (error) {
-      console.error('Failed to search restaurants:', error);
+      if (__DEV__) {
+        console.error('Failed to search restaurants:', error);
+      }
       return [];
     }
   }
@@ -509,6 +567,52 @@ export class ApiService {
         updated_at: '' 
       }
     ];
+  }
+
+  /**
+   * Mock restaurant locations for development/testing
+   */
+  private getMockRestaurantLocations(restaurantId: number): RestaurantLocation[] {
+    const restaurant = this.getMockRestaurants().find(r => r.id === restaurantId);
+    if (!restaurant) return [];
+
+    // Create a mock RestaurantLocation based on the restaurant data
+    const mockOperatingHours = {
+      monday: { open: '09:00', close: '22:00', closed: false },
+      tuesday: { open: '09:00', close: '22:00', closed: false },
+      wednesday: { open: '09:00', close: '22:00', closed: false },
+      thursday: { open: '09:00', close: '22:00', closed: false },
+      friday: { open: '09:00', close: '23:00', closed: false },
+      saturday: { open: '10:00', close: '23:00', closed: false },
+      sunday: { open: '10:00', close: '21:00', closed: false }
+    };
+
+    return [
+      {
+        id: restaurantId * 100, // Generate unique ID
+        address: restaurant.address || 'Mock Address',
+        phone: restaurant.phone,
+        latitude: restaurant.latitude,
+        longitude: restaurant.longitude,
+        operatingHours: mockOperatingHours,
+        restaurant: restaurant,
+        districtId: 1, // Mock district ID
+        active: true,
+        created_at: '',
+        updated_at: ''
+      }
+    ];
+  }
+
+  /**
+   * Mock open status for development/testing
+   * Simulates business hours logic (9 AM - 10 PM)
+   */
+  private getMockOpenStatus(): boolean {
+    const now = new Date();
+    const currentHour = now.getHours();
+    // Mock business hours: 9 AM to 10 PM
+    return currentHour >= 9 && currentHour < 22;
   }
 }
 
