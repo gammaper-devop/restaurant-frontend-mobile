@@ -112,6 +112,18 @@ export interface UserLocation {
   accuracy?: number;
 }
 
+// Dish
+export interface Dish extends BaseEntity {
+  name: string;
+  description?: string;
+  image?: string;
+  price: number | string;
+  restaurant: {
+    id: number;
+    name: string;
+  };
+}
+
 // API Response types
 export interface ApiResponse<T> {
   success: boolean;

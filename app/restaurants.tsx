@@ -6,13 +6,14 @@ import {
   ScrollView, 
   TextInput, 
   Image,
-  SafeAreaView,
   RefreshControl,
   Alert
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { useNearbyRestaurants } from '../hooks';
 import { Ionicons } from '@expo/vector-icons';
+import { getImageWithFallback } from '../utils/imageUtils';
 
 export default function RestaurantsScreen() {
   const router = useRouter();
@@ -57,17 +58,21 @@ export default function RestaurantsScreen() {
     );
   };
 
-  const renderRestaurantCard = (restaurant: any, index: number) => (
-    <TouchableOpacity 
-      key={restaurant.id || index}
-      className="bg-white rounded-2xl mb-4 shadow-sm overflow-hidden"
-      onPress={() => handleRestaurantPress(restaurant)}
-      activeOpacity={0.7}
-    >
+  const renderRestaurantCard = (restaurant: any, index: number) => {
+    // Debug log
+    if (__DEV__) {
+      console.log('🍽️ Rendering restaurant card:', restaurant.name, 'ID:', restaurant.id);
+    }
+    
+    return (
+      <View 
+        key={restaurant.id || index}
+        className="bg-white rounded-2xl mb-4 shadow-sm overflow-hidden"
+      >
       {/* Restaurant Image */}
       <View className="relative">
         <Image
-          source={{ uri: restaurant.imageUrl }}
+          source={{ uri: getImageWithFallback('restaurants', restaurant.imageUrl) }}
           className="w-full h-48"
           resizeMode="cover"
         />
@@ -103,7 +108,7 @@ export default function RestaurantsScreen() {
           {restaurant.description}
         </Text>
 
-        <View className="flex-row items-center justify-between">
+        <View className="flex-row items-center justify-between mb-3">
           <View className="flex-row items-center">
             <Ionicons name="location-outline" size={16} color="#6B7280" />
             <Text className="text-sm text-blue-600 font-medium ml-1">
@@ -121,9 +126,70 @@ export default function RestaurantsScreen() {
             </View>
           )}
         </View>
+
+        {/* Action Buttons */}
+        <View style={{
+          flexDirection: 'row',
+          gap: 8,
+          marginTop: 8
+        }}>
+          <TouchableOpacity 
+            onPress={() => handleRestaurantPress(restaurant)}
+            style={{
+              flex: 1,
+              backgroundColor: '#f3f4f6',
+              paddingVertical: 10,
+              borderRadius: 12,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Ionicons name="information-circle-outline" size={16} color="#374151" />
+            <Text style={{
+              color: '#374151',
+              fontWeight: '500',
+              fontSize: 14,
+              marginLeft: 4
+            }}>Details</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            onPress={() => {
+              if (__DEV__) {
+                console.log('🍴 View Menu pressed for:', restaurant.name);
+              }
+              router.push({
+                pathname: '/restaurant-dishes',
+                params: { 
+                  restaurantId: restaurant.id.toString(),
+                  restaurantName: restaurant.name 
+                }
+              });
+            }}
+            style={{
+              flex: 1,
+              backgroundColor: '#EF4444',
+              paddingVertical: 10,
+              borderRadius: 12,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Ionicons name="restaurant" size={16} color="white" />
+            <Text style={{
+              color: 'white',
+              fontWeight: '500',
+              fontSize: 14,
+              marginLeft: 4
+            }}>View Menu</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </TouchableOpacity>
-  );
+      </View>
+    );
+  };
 
   const renderEmptyState = () => (
     <View className="flex-1 items-center justify-center py-20">

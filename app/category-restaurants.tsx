@@ -17,6 +17,7 @@ import {
   View
 } from 'react-native';
 import { useLocation, useRestaurantsByCategory } from '../hooks';
+import { getImageWithFallback } from '../utils/imageUtils';
 
 const { width, height } = Dimensions.get('window');
 
@@ -89,15 +90,11 @@ export default function CategoryRestaurantsScreen() {
         },
       ]}
     >
-      <TouchableOpacity
-        onPress={() => handleRestaurantPress(restaurant)}
-        activeOpacity={0.9}
-      >
         <View style={styles.cardContent}>
           {/* Restaurant Image */}
           <View style={styles.imageWrapper}>
             <Image
-              source={{ uri: restaurant.imageUrl }}
+              source={{ uri: getImageWithFallback('restaurants', restaurant.imageUrl) }}
               style={styles.restaurantImage}
               resizeMode="cover"
             />
@@ -155,9 +152,65 @@ export default function CategoryRestaurantsScreen() {
                   </Text>
                 </View>
               </View>
+              
+              {/* Action Buttons */}
+              <View style={{
+                flexDirection: 'row',
+                gap: 8,
+                marginTop: 16
+              }}>
+                <TouchableOpacity 
+                  onPress={() => handleRestaurantPress(restaurant)}
+                  style={{
+                    flex: 1,
+                    backgroundColor: '#f3f4f6',
+                    paddingVertical: 10,
+                    borderRadius: 12,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Ionicons name="information-circle-outline" size={16} color="#374151" />
+                  <Text style={{
+                    color: '#374151',
+                    fontWeight: '500',
+                    fontSize: 14,
+                    marginLeft: 4
+                  }}>Details</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  onPress={() => {
+                    router.push({
+                      pathname: '/restaurant-dishes',
+                      params: { 
+                        restaurantId: restaurant.id.toString(),
+                        restaurantName: restaurant.name 
+                      }
+                    });
+                  }}
+                  style={{
+                    flex: 1,
+                    backgroundColor: '#EF4444',
+                    paddingVertical: 10,
+                    borderRadius: 12,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Ionicons name="restaurant" size={16} color="white" />
+                  <Text style={{
+                    color: 'white',
+                    fontWeight: '500',
+                    fontSize: 14,
+                    marginLeft: 4
+                  }}>View Menu</Text>
+                </TouchableOpacity>
+              </View>
           </View>
         </View>
-      </TouchableOpacity>
     </Animated.View>
   );
 

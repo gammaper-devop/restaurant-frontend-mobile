@@ -19,6 +19,7 @@ import {
 } from 'react-native';
 import { apiService } from '../services/apiService';
 import { Restaurant, RestaurantLocation, DaySchedule, OperatingHours } from '../types';
+import { getImageWithFallback } from '../utils/imageUtils';
 
 const { width } = Dimensions.get('window');
 
@@ -229,7 +230,7 @@ export default function RestaurantDetailsNativeScreen() {
           {/* Restaurant Image */}
           <View style={styles.imageSection}>
             <Image
-              source={{ uri: restaurant.imageUrl }}
+              source={{ uri: getImageWithFallback('restaurants', restaurant.imageUrl) }}
               style={styles.restaurantImage}
               resizeMode="cover"
             />

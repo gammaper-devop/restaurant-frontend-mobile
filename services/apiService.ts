@@ -7,7 +7,7 @@ declare const __DEV__: boolean;
 // Configure your backend URL here
 // For development: Use localhost or your actual backend URL
 // For production: Use your production API URL
-const API_BASE_URL = 'http://localhost:3000/api'; // Change this to your actual backend URL
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://192.168.100.35:3000/api';
 
 // Create axios instance with default configuration
 const api = axios.create({

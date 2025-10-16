@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { apiService } from '../services/apiService';
 import { Restaurant } from '../types';
+import { getImageWithFallback } from '../utils/imageUtils';
 
 const { width } = Dimensions.get('window');
 
@@ -27,6 +28,13 @@ export default function RestaurantDetailsScreen() {
   useEffect(() => {
     loadRestaurantDetails();
   }, [id]);
+
+  // Debug log
+  useEffect(() => {
+    if (restaurant && __DEV__) {
+      console.log('🏭 Restaurant Details loaded:', restaurant.name, 'ID:', restaurant.id);
+    }
+  }, [restaurant]);
 
   const loadRestaurantDetails = async () => {
     if (!id) return;
@@ -103,7 +111,7 @@ export default function RestaurantDetailsScreen() {
           {/* Restaurant Image */}
           <View className="relative">
             <Image
-              source={{ uri: restaurant.imageUrl }}
+              source={{ uri: getImageWithFallback('restaurants', restaurant.imageUrl) }}
               style={{ width, height: 280 }}
               resizeMode="cover"
             />
@@ -252,6 +260,44 @@ export default function RestaurantDetailsScreen() {
               </View>
             </View>
 
+            {/* Menu Section */}
+            <View className="mb-6">
+              <Text className="text-lg font-bold text-gray-900 mb-4">Menu & Dishes</Text>
+              <TouchableOpacity 
+                onPress={() => router.push({
+                  pathname: '/restaurant-dishes',
+                  params: { 
+                    restaurantId: restaurant.id.toString(),
+                    restaurantName: restaurant.name 
+                  }
+                })}
+                className="p-4 rounded-2xl flex-row items-center justify-between"
+                style={{
+                  backgroundColor: '#EF4444',
+                  shadowColor: '#EF4444',
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.2,
+                  shadowRadius: 8,
+                  elevation: 6,
+                }}
+              >
+                <View className="flex-row items-center flex-1">
+                  <View className="bg-white/20 p-3 rounded-full mr-4">
+                    <Ionicons name="restaurant" size={24} color="white" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-white font-bold text-lg">
+                      View Menu
+                    </Text>
+                    <Text className="text-white/90 text-sm">
+                      Explore dishes and prices
+                    </Text>
+                  </View>
+                </View>
+                <Ionicons name="chevron-forward" size={24} color="white" />
+              </TouchableOpacity>
+            </View>
+
             {/* Reviews Summary */}
             <View className="mb-8">
               <Text className="text-lg font-bold text-gray-900 mb-4">Customer Reviews</Text>
@@ -291,6 +337,21 @@ export default function RestaurantDetailsScreen() {
             >
               <Ionicons name="call" size={20} color="#374151" />
               <Text className="text-gray-700 font-medium mt-1">Call</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              onPress={() => router.push({
+                pathname: '/restaurant-dishes',
+                params: { 
+                  restaurantId: restaurant.id.toString(),
+                  restaurantName: restaurant.name 
+                }
+              })}
+              className="flex-1 py-4 rounded-xl items-center"
+              style={{ backgroundColor: '#EF4444' }}
+            >
+              <Ionicons name="restaurant" size={20} color="white" />
+              <Text className="text-white font-medium mt-1">Menu</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 

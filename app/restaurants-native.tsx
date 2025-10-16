@@ -16,6 +16,7 @@ import {
   View
 } from 'react-native';
 import { useCategories, useNearbyRestaurants, useRestaurantOpenStatus } from '../hooks';
+import { getImageWithFallback } from '../utils/imageUtils';
 
 const { width } = Dimensions.get('window');
 
@@ -90,16 +91,14 @@ export default function RestaurantsNativeScreen() {
     const { isOpen, loading } = openStatus;
 
     return (
-      <TouchableOpacity 
+      <View 
         key={restaurant.id || index}
         style={styles.restaurantCard}
-        onPress={() => handleRestaurantPress(restaurant)}
-        activeOpacity={0.7}
       >
         {/* Restaurant Image */}
         <View style={styles.imageContainer}>
           <Image
-            source={{ uri: restaurant.imageUrl }}
+            source={{ uri: getImageWithFallback('restaurants', restaurant.imageUrl) }}
             style={styles.restaurantImage}
             resizeMode="cover"
           />
@@ -125,8 +124,33 @@ export default function RestaurantsNativeScreen() {
               </Text>
             </View>
           </View>
+
+          {/* Action Buttons */}
+          <View style={styles.actionButtons}>
+            <TouchableOpacity 
+              onPress={() => handleRestaurantPress(restaurant)}
+              style={styles.detailsButton}
+            >
+              <Ionicons name="information-circle-outline" size={16} color="#374151" />
+              <Text style={styles.detailsButtonText}>Details</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              onPress={() => router.push({
+                pathname: '/restaurant-dishes',
+                params: { 
+                  restaurantId: restaurant.id.toString(),
+                  restaurantName: restaurant.name 
+                }
+              })}
+              style={styles.menuButton}
+            >
+              <Ionicons name="restaurant" size={16} color="white" />
+              <Text style={styles.menuButtonText}>View Menu</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </TouchableOpacity>
+      </View>
     );
   };
 
@@ -640,6 +664,42 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 11,
     fontWeight: '500',
+    marginLeft: 4,
+  },
+  // Action Buttons Styles
+  actionButtons: {
+    flexDirection: 'row',
+    marginTop: 12,
+    gap: 8,
+  },
+  detailsButton: {
+    flex: 1,
+    backgroundColor: '#f3f4f6',
+    paddingVertical: 10,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  detailsButtonText: {
+    color: '#374151',
+    fontWeight: '500',
+    fontSize: 14,
+    marginLeft: 4,
+  },
+  menuButton: {
+    flex: 1,
+    backgroundColor: '#EF4444',
+    paddingVertical: 10,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  menuButtonText: {
+    color: 'white',
+    fontWeight: '500',
+    fontSize: 14,
     marginLeft: 4,
   },
 });
