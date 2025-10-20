@@ -4,9 +4,15 @@
   "version": "1.0.0",
   "scripts": {
     "start": "expo start",
+    "start:dev": "NODE_ENV=development expo start",
+    "start:prod": "NODE_ENV=production expo start --no-dev --minify",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo start --android",
+    "android:dev": "NODE_ENV=development expo start --android",
+    "android:prod": "NODE_ENV=production expo start --android --no-dev --minify",
     "ios": "expo start --ios",
+    "ios:dev": "NODE_ENV=development expo start --ios",
+    "ios:prod": "NODE_ENV=production expo start --ios --no-dev --minify",
     "web": "expo start --web",
     "lint": "expo lint"
   },
